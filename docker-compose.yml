@@ -1,0 +1,12 @@
+#docker-compose up -d
+
+version: "3.9"
+services:
+  postgres:
+    image: postgres
+    environment:
+      POSTGRES_DB: "telegramdb"
+      POSTGRES_USER: "user"
+      POSTGRES_PASSWORD: "psw"
+    ports:
+      - "5321:5321"
