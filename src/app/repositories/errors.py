@@ -1,0 +1,3 @@
+class RepoException(Exception):
+    ...
+
