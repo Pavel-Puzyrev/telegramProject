@@ -10,10 +10,18 @@ data_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-@data_router.post("")
-async def convert_tlg_json_to_db(file: UploadFile, data_repo: RepoDataDep):
-    base_dir = Path(__file__).resolve().parent.parent.parent
+@data_router.post("/write")
+def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
+    jsn = file.file.read().decode("utf-8")
+    sch_model = data_repo.write_json_to_db(jsn)
+    try:
+        print(sch_model.messages[0].id)
+    except Exception as e:
+        print(e)
 
+
+@data_router.post("/convert")
+async def convert_tlg_json_to_db(file: UploadFile, data_repo: RepoDataDep):
     jsn = await file.read()
 
     fake_db = sch.DialogModel.model_validate_json(json_data=jsn)
@@ -63,6 +71,7 @@ async def convert_tlg_json_to_db(file: UploadFile, data_repo: RepoDataDep):
             string_input.append(print_field_gamut(attr_name, list_of_schemes))
         return string_input
 
+    base_dir = Path(__file__).resolve().parent.parent.parent
     file_out = base_dir / 'resources' / 'out.json'
     list_to_write = write_to_file(all_messages)
     with open(file_out, encoding="utf_8", mode="w") as fw:

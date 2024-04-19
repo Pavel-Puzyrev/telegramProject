@@ -8,14 +8,10 @@ from app.db.models import Base
 
 
 def create(engn: Engine):
-    # if not database_exists(engn.url):
-    #     create_database(engn.url)
     Base.metadata.create_all(engn)
 
 
 def drop(engn: Engine):
-    # if database_exists(eng.url):
-    #     drop_database(eng.url)
     Base.metadata.drop_all(engn)
 
 

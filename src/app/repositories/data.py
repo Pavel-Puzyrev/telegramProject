@@ -1,12 +1,23 @@
 from sqlalchemy import select, text
 
-from app.db import models as orm
 from app.repositories.base import BaseRepository
 from app.schemas import data as sch
+from app.db import models as orm
 
 
 class DataRepository(BaseRepository):
-    ...
+    def write_json_to_db(self, jsn: bytes) -> sch.DialogModel:
+        fake_db = sch.DialogModel.model_validate_json(json_data=jsn)
+
+        dialog_model = orm.DialogModel(**fake_db.model_dump(exclude={'messages'}))
+        self.session.add(dialog_model)
+        self.session.flush()
+
+        dialog = self.session.get(orm.DialogModel, fake_db.id)
+        for m in fake_db.messages:
+            dialog.messages.append(orm.Message(**m.model_dump(exclude={"text"})))
+        self.session.commit()
+        return fake_db
 
     # def get_user_by_id(self, user_id: int) -> orm.Account:
     #     query = (

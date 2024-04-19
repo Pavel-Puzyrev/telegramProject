@@ -16,8 +16,8 @@ app.include_router(main_router, prefix="/api/v1")
 
 @app.on_event("startup")
 async def startup_event():
-    # _main(is_drop=True)
-    # _main(is_drop=False)
+    _main(is_drop=True)
+    _main(is_drop=False)
     ...
     # create_fake_users(UsersRepository(session=session_maker()), n=5)
 

@@ -43,28 +43,35 @@ class Message(BaseModel):
     from_id: Optional[str] = None
     reply_to_message_id: Optional[int] = None
 
-    poll: Optional[Poll] = None  # ОПРОС
+    # poll: Optional[Poll] = None  # ОПРОС
     message_id: Optional[int] = None
 
-    forwarded_from: Optional[str] = None
+    # forwarded_from: Optional[str] = None
 
-    photo: Optional[str] = None
-    file: Optional[str] = None
-    thumbnail: Optional[str] = None
+    # photo: Optional[str] = None
+    # file: Optional[str] = None
+    # thumbnail: Optional[str] = None
     media_type: Optional[str] = None
     mime_type: Optional[str] = None
-    duration_seconds: Optional[int] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
-    sticker_emoji: Optional[str] = None
+    # duration_seconds: Optional[int] = None
+    # width: Optional[int] = None
+    # height: Optional[int] = None
+    # sticker_emoji: Optional[str] = None
     text: str | list[str | TextItem]
-    text_entities: list[TextEntity]
+    # text_entities: list[TextEntity]
     # ACTIONS
     actor: Optional[str] = None
     actor_id: Optional[str] = None
     action: Optional[str] = None
     title: Optional[str] = None
-    members: Optional[list[Any]] = None
+    # members: Optional[list[str | None]] = None
+
+
+class DialogModel(BaseModel):
+    name: str
+    type: str
+    id: int
+    messages: list[Message]
 
 
 class MessageSet(BaseModel):
@@ -96,10 +103,3 @@ class MessageSet(BaseModel):
     action: set[str | None] = set()
     title: set[str | None] = set()
     members: set[list[str | None]] = set()
-
-
-class DialogModel(BaseModel):
-    name: str
-    type: str
-    id: int
-    messages: list[Message]

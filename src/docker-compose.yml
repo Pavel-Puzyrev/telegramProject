@@ -9,4 +9,4 @@ services:
       POSTGRES_USER: "user"
       POSTGRES_PASSWORD: "psw"
     ports:
-      - "5321:5321"
+      - "5432:5432"
