@@ -57,8 +57,8 @@ class Message(BaseModel):
     # width: Optional[int] = None
     # height: Optional[int] = None
     # sticker_emoji: Optional[str] = None
-    text: str | list[str | TextItem]
-    # text_entities: list[TextEntity]
+    # text: str | list[str | TextItem]
+    text_entities: list[TextEntity]
     # ACTIONS
     actor: Optional[str] = None
     actor_id: Optional[str] = None

@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 
 from app.api.endpoints import main_router
@@ -12,7 +14,6 @@ configure_loggers(
 
 app = FastAPI(debug=settings.debug)
 app.include_router(main_router, prefix="/api/v1")
-
 
 @app.on_event("startup")
 async def startup_event():

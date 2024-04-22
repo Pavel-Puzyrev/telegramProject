@@ -25,7 +25,10 @@ def configure_loggers(
     # Initialize file handler if filename is provided
     if filename:
         file_handler = RotatingFileHandler(
-            filename, maxBytes=max_file_size, backupCount=backup_count
+            filename,
+            maxBytes=max_file_size,
+            backupCount=backup_count,
+            encoding='utf-8',
         )
         file_handler.setFormatter(formatter)
 
@@ -35,10 +38,12 @@ def configure_loggers(
         level=log_level,
         handlers=handlers,
         format=log_format,
-        datefmt=date_format
+        datefmt=date_format,
+        # encoding='utf-8'
     )
     if site_logger_names is not None:
         for logger_name in site_logger_names:
             logger = logging.getLogger(logger_name)
             logger.setLevel(log_level)
             # logger.handlers = handlers
+

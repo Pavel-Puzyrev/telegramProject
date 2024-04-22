@@ -62,8 +62,29 @@ class Message(Base):
     dialog: Mapped["DialogModel"] = relationship(
         back_populates="messages"
     )
+
+    text_entities: Mapped[list["TextEntity"]] = relationship(
+        back_populates="messages"
+    )
     # Relationships
     # poll: Mapped[Poll] = relationship(back_populates="messages")
+
+
+class TextEntity(Base):
+    __tablename__ = "textentity"
+    id: Mapped[intpk]
+    type: Mapped[str | None]
+    text: Mapped[str | None]
+    href: Mapped[str | None]
+    document_id: Mapped[str | None]
+    user_id: Mapped[int | None]
+    message_id: Mapped[int] = mapped_column(ForeignKey('messages.id'))
+
+    messages: Mapped["Message"] = relationship(
+        back_populates="text_entities"
+    )
+
+
 
 # class Poll(Base):
 #     __tablename__ = 'polls'

@@ -9,13 +9,23 @@ class DataRepository(BaseRepository):
     def write_json_to_db(self, jsn: bytes) -> sch.DialogModel:
         fake_db = sch.DialogModel.model_validate_json(json_data=jsn)
 
-        dialog_model = orm.DialogModel(**fake_db.model_dump(exclude={'messages'}))
+        dialog_model = orm.DialogModel(**fake_db.model_dump(
+            exclude={'messages'}
+        ))
         self.session.add(dialog_model)
-        self.session.flush()
+        self.session.flush() # ??
 
         dialog = self.session.get(orm.DialogModel, fake_db.id)
-        for m in fake_db.messages:
-            dialog.messages.append(orm.Message(**m.model_dump(exclude={"text"})))
+        for n, jsn_message in enumerate(fake_db.messages):
+            dialog.messages.append(orm.Message(**jsn_message.model_dump(
+                exclude={"text_entities"}
+            )))
+            orm_message = dialog.messages[n]
+            # self.session.commit()
+            # message = self.session.get(orm.Message, fake_db.messages[message.id].id)
+            if jsn_message.text_entities is not None:
+                for t in jsn_message.text_entities:
+                    orm_message.text_entities.append(orm.TextEntity(**t.model_dump()))
         self.session.commit()
         return fake_db
 
