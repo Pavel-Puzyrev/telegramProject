@@ -12,12 +12,15 @@ logger = logging.getLogger(__name__)
 
 @data_router.post("/write")
 def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
-    jsn = file.file.read().decode("utf-8")
-    sch_model = data_repo.write_json_to_db(jsn)
-    try:
-        print(sch_model.messages[0].id)
-    except Exception as e:
-        print(e)
+    logger.info("This is a test message with an emoji 😄")
+    # jsn = file.file.read().decode("utf-8")
+
+    # jsn = file.file.read()
+    # sch_model = data_repo.write_json_to_db(jsn)
+    # try:
+    #     print(sch_model.messages[0].id)
+    # except Exception as e:
+    #     print(e)
 
 
 @data_router.post("/convert")

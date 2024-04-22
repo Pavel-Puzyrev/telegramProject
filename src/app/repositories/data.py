@@ -13,7 +13,7 @@ class DataRepository(BaseRepository):
             exclude={'messages'}
         ))
         self.session.add(dialog_model)
-        self.session.flush() # ??
+        self.session.flush()
 
         dialog = self.session.get(orm.DialogModel, fake_db.id)
         for n, jsn_message in enumerate(fake_db.messages):
