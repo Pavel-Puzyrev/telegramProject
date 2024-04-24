@@ -1,3 +1,4 @@
+import datetime
 from typing import Optional, Any
 
 from pydantic import BaseModel, Field
@@ -35,10 +36,10 @@ class Poll(BaseModel):
 class Message(BaseModel):
     id: int
     type: str
-    date: str
-    date_unixtime: str
-    edited: Optional[str] = None
-    edited_unixtime: Optional[str] = None
+    date: datetime.datetime
+    # date_unixtime: str
+    edited: Optional[datetime.datetime] = None
+    # edited_unixtime: Optional[str] = None
     from_: Optional[str] = Field(None, alias='from')
     from_id: Optional[str] = None
     reply_to_message_id: Optional[int] = None
@@ -103,3 +104,9 @@ class MessageSet(BaseModel):
     action: set[str | None] = set()
     title: set[str | None] = set()
     members: set[list[str | None]] = set()
+
+
+class CountMessagesByUserId(BaseModel):
+    timestamp: datetime.datetime
+    count: int
+

@@ -32,9 +32,9 @@ class Message(Base):
     id: Mapped[intpk]
     type: Mapped[str]
     date: Mapped[datetime.datetime]
-    date_unixtime: Mapped[str]
+    # date_unixtime: Mapped[str]
     edited: Mapped[datetime.datetime | None]
-    edited_unixtime: Mapped[str | None]
+    # edited_unixtime: Mapped[str | None]
     from_: Mapped[str | None]
     from_id: Mapped[str | None]
     reply_to_message_id: Mapped[int | None]
@@ -50,7 +50,7 @@ class Message(Base):
     # width: Mapped[int | None]
     # height: Mapped[int | None]
     # sticker_emoji: Mapped[str | None]
-    text: Mapped[str | None]  # Note: complex JSON structure might need handling
+    # text: Mapped[str | None]  # Note: complex JSON structure might need handling
     # text_entities
     actor: Mapped[str | None]
     actor_id: Mapped[str | None]

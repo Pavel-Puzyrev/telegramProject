@@ -1,7 +1,12 @@
+from datetime import datetime
 import logging
+from decimal import Decimal
 from pathlib import Path
+from typing import Dict, Tuple, Any, Optional
 
-from fastapi import APIRouter, UploadFile
+from fastapi import APIRouter, UploadFile, Query
+from sqlalchemy import Row
+
 from app.schemas import data as sch
 from app.deps.db import RepoDataDep
 
@@ -18,6 +23,55 @@ def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
         print(sch_model.messages[0].id)
     except Exception as e:
         print(e)
+
+
+@data_router.get("/count-messages")
+def count_messages_by_user_id(
+        data_repo: RepoDataDep,
+        user_name="Pavel P",
+        # data_start,
+        # data_end,
+):
+    cnt = data_repo.count_messages(
+        user_name,
+        # data_start,
+        # data_end,
+    )
+    return {"count": cnt}
+
+
+@data_router.get("/count-messages-per-hour")
+def count_messages_by_user_id(
+        data_repo: RepoDataDep,
+        user_name: str = "Pavel P",
+        data_start: datetime = datetime.fromtimestamp(0),
+        data_end: datetime = datetime.now(),
+) -> list[sch.CountMessagesByUserId]:
+    cnt = data_repo.count_messages_per_hour(
+        user_name,
+        data_start,
+        data_end,
+    )
+    res = []
+    for row in cnt:
+        res.append(sch.CountMessagesByUserId(timestamp=row[0], count=row[1]))
+    return res
+
+
+@data_router.put("/count-word")
+def count_words_in_messages(
+        data_repo: RepoDataDep,
+        user_names: list[str]|None = None,
+        data_start: datetime = datetime.fromtimestamp(0),
+        data_end: datetime = datetime.now(),
+) -> dict[str, Any]:
+    cnt = data_repo.count_word(
+        user_names,
+        data_start,
+        data_end,
+    )
+    res = cnt[0]
+    return {"count": res[0], "sum": res[1], "word_per_msg": round(res[2], 2)}
 
 
 @data_router.post("/convert")
