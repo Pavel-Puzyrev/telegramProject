@@ -5,7 +5,7 @@ from typing import Annotated
 
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table, BigInteger
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy.sql.sqltypes import DateTime
 
@@ -77,7 +77,7 @@ class TextEntity(Base):
     text: Mapped[str | None]
     href: Mapped[str | None]
     document_id: Mapped[str | None]
-    user_id: Mapped[int | None]
+    user_id: Mapped[int | None] = mapped_column(BigInteger)
     message_id: Mapped[int] = mapped_column(ForeignKey('messages.id'))
 
     messages: Mapped["Message"] = relationship(

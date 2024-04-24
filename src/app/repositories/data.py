@@ -19,16 +19,17 @@ class DataRepository(BaseRepository):
         self.session.flush()  # ??
 
         dialog = self.session.get(orm.DialogModel, fake_db.id)
-        for n, jsn_message in enumerate(fake_db.messages):
-            dialog.messages.append(orm.Message(**jsn_message.model_dump(
+        messages = []
+        for jsn_message in fake_db.messages:
+            message = orm.Message(**jsn_message.model_dump(
                 exclude={"text_entities"}
-            )))
-            orm_message = dialog.messages[n]
-            # self.session.commit()
-            # message = self.session.get(orm.Message, fake_db.messages[message.id].id)
+            ))
+            dialog.messages.append(message)
             if jsn_message.text_entities is not None:
-                for t in jsn_message.text_entities:
-                    orm_message.text_entities.append(orm.TextEntity(**t.model_dump()))
+                text_entities = [orm.TextEntity(**t.model_dump()) for t in jsn_message.text_entities]
+                message.text_entities.extend(text_entities)
+            messages.append(message)
+        self.session.add_all(messages)
         self.session.commit()
         return fake_db
 
