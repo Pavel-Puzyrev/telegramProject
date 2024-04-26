@@ -13,6 +13,12 @@ data_router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
+# TODO: добавить получение списка людей
+# TODO: сделать единый ответ как для матплотлиба
+# TODO: добавить DEL таблиц каскад
+# TODO: разнести по роутерам get и DDL
+
+
 @data_router.post("/write")
 def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
     jsn = file.file.read().decode("utf-8")
@@ -26,6 +32,11 @@ def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
                                 "data": None,
                                 "details": e
                             })
+
+
+@data_router.get("/get_users")
+def get_users(data_repo: RepoDataDep) -> dict[str, list[str]]:
+    return {"users": data_repo.get_users()}
 
 
 @data_router.get("/count-messages")
@@ -93,7 +104,6 @@ def count_messages_for_24_hours(
     for i in cnt:
         res.update({i[0]: i[1]})
     return res
-# TODO сделать единый ответ как для матплотлиба
 
 # @data_router.post("/convert")
 # async def convert_tlg_json_to_db(file: UploadFile, data_repo: RepoDataDep):

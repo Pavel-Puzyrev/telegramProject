@@ -30,6 +30,10 @@ class DataRepository(BaseRepository):
         self.session.commit()
         return fake_db
 
+    def get_users(self) -> list[str]:
+        query = select(orm.Message.from_).distinct(orm.Message.from_).filter(orm.Message.from_.isnot(None))
+        return self.session.scalars(query).all()
+
     def count_messages(
             self,
             user_name: str,
