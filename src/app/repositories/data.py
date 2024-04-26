@@ -1,55 +1,58 @@
 from datetime import datetime
 
-from sqlalchemy import select, func, and_, any_
-from sqlalchemy.orm import aliased, contains_eager
+from sqlalchemy import select, func, Integer
+from sqlalchemy.orm import aliased
 
+from app.db import models as orm
 from app.repositories.base import BaseRepository
 from app.schemas import data as sch
-from app.db import models as orm
 
 
 class DataRepository(BaseRepository):
     def write_json_to_db(self, jsn: bytes) -> sch.DialogModel:
         fake_db = sch.DialogModel.model_validate_json(json_data=jsn)
 
-        dialog_model = orm.DialogModel(**fake_db.model_dump(
-            exclude={'messages'}
-        ))
+        # Создаем и добавляем диалог
+        dialog_model = orm.DialogModel(**fake_db.model_dump(exclude={'messages'}))
         self.session.add(dialog_model)
-        self.session.flush()  # ??
 
-        dialog = self.session.get(orm.DialogModel, fake_db.id)
-        messages = []
         for jsn_message in fake_db.messages:
-            message = orm.Message(**jsn_message.model_dump(
-                exclude={"text_entities"}
-            ))
-            dialog.messages.append(message)
-            if jsn_message.text_entities is not None:
-                text_entities = [orm.TextEntity(**t.model_dump()) for t in jsn_message.text_entities]
-                message.text_entities.extend(text_entities)
-            messages.append(message)
-        self.session.add_all(messages)
+            # Обработка сообщений
+            message = orm.Message(**jsn_message.model_dump(exclude={"text_entities"}), dialog_model_id=fake_db.id)
+            self.session.add(message)
+
+            for text_ent in jsn_message.text_entities:
+                # Обработка текста сообщений
+                text_entity = orm.TextEntity(**text_ent.model_dump(), message_id=jsn_message.id)
+                self.session.add(text_entity)
+
         self.session.commit()
         return fake_db
 
     def count_messages(
             self,
-            user_name,
-            # data_start,
-            # data_end,
-    ):
-        """select count(date)
+            user_name: str,
+            data_start: datetime,
+            data_end: datetime,
+    ) -> int:
+        """select count(m.date)
         from messages m
         join textentity t on m.id = t.message_id
         where from_ = 'Pavel P'
         group by from_"""
+
+        m = aliased(orm.Message)
+        t = aliased(orm.TextEntity)
+
         query = (
             select(
-                func.count(orm.Message.date)
+                func.count(m.date)
             )
-            .filter(orm.Message.from_.contains(user_name))
-            .group_by(orm.Message.from_)
+            .select_from(m)
+            .join(t, m.id == t.message_id)
+            .filter(m.from_.contains(user_name))
+            .filter(m.date.between(data_start, data_end))
+            .group_by(m.from_)
         )
         res = self.session.execute(query)
         result = res.scalar()
@@ -77,15 +80,19 @@ class DataRepository(BaseRepository):
 
         m = aliased(orm.Message)
 
-        cte = (
-            select(
-                m.id,
-                m.from_,
-                m.date,
-                func.date_trunc('hour', m.date).label('datetr'),
-                func.count(m.id).over(partition_by=func.date_trunc('hour', m.date)).label('wind')
-            ).filter(m.from_.contains(user_name)).filter(m.date.between(data_start, data_end))
-        ).cte('subq')
+        cte = ((
+                   select(
+                       m.id,
+                       m.from_,
+                       m.date,
+                       func.date_trunc('hour', m.date).label('datetr'),
+                       func.count(m.id).over(partition_by=func.date_trunc('hour', m.date)).label('wind')
+                   )
+                   .filter(m.from_.contains(user_name))
+                   .filter(m.date.between(data_start, data_end))
+               )
+               .cte('subq')
+               )
 
         query = (
             select(
@@ -98,11 +105,42 @@ class DataRepository(BaseRepository):
         res = self.session.execute(query)
         return res.all()
 
-    def count_word(self,
-                   user_names: list[str],
-                   data_start: datetime,
-                   data_end: datetime,
-                   ):
+    def count_messages_for_24_hours(self,
+                                    user_name: str,
+                                    data_start: datetime,
+                                    data_end: datetime,
+                                    list_of_month: list[int],
+                                    ) -> list[tuple[float, int]]:
+        # TODO Чтобы не лист месяцев принимался, а диапазон 3-6 11-2
+        """
+        select msg, count(msg)
+        from (select date_part('hour', date_trunc('hour', date)) as msg
+              from messages
+              where from_ like '%'
+                and (date_part('month', date) IN ('9','10','11')))
+                 as subq
+        group by msg
+        order by msg
+        """
+
+        subq = (select(func.date_part('hour', func.date_trunc('hour', orm.Message.date)).cast(Integer).label('msg'))
+                .filter(orm.Message.date.between(data_start, data_end))
+                .filter(orm.Message.from_.like(user_name))
+                .filter((func.date_part('month', orm.Message.date).cast(Integer)).in_(list_of_month))
+                .subquery("subq"))
+        query = (select(subq.c.msg, func.count(subq.c.msg))
+                 .group_by(subq.c.msg)
+                 .order_by(subq.c.msg))
+
+        res = self.session.execute(query)
+        return res.all()
+
+    def count_words_in_messages(self,
+                                user_names: list[str],
+                                data_start: datetime,
+                                data_end: datetime,
+                                ) -> tuple[int, int, float]:
+        # TODO Сделать чтобы ответ был вложенный по людям
         """
         select count(t.text),
                sum(length(t.text) - length(replace(replace(t.text, '  ', ' '), ' ', ''))),
@@ -117,10 +155,12 @@ class DataRepository(BaseRepository):
 
         query = (
             select(
-                func.count(t.text),
-                func.sum(func.length(t.text) - func.length(func.replace(func.replace(t.text, '  ', ' '), ' ', ''))),
-                (func.sum(func.length(t.text) - func.length(func.replace(t.text, ' ', ''))) / func.count(t.text)).label(
-                    'word_per_msg')
+                func.count(t.text).label("count of messages"),
+                func.sum(func.length(t.text) - func.length(func.replace(func.replace(t.text, '  ', ' '), ' ', '')))
+                .label("count of words"),
+                (func.sum(func.length(t.text) - func.length(func.replace(func.replace(t.text, '  ', ' '), ' ', '')))
+                 / func.count(t.text))
+                .label('word_per_msg')
             )
             .select_from(m)
             .join(t, m.id == t.message_id)
@@ -132,13 +172,4 @@ class DataRepository(BaseRepository):
         if user_names is not None and user_names:
             query = query.filter(m.from_.in_(user_names))
         res = self.session.execute(query)
-        return res.all()
-
-#
-# def select_id_by_role(self, role: str) -> int:
-#     # query = select(orm.Account).options(selectinload(orm.Account.role)).where(orm.Account.login == user_login)
-#     query = select(orm.Role.id).where(orm.Role.role == role)
-#     result = self.session.scalars(query)
-#     role_id = result.first()
-#     return role_id
-#
+        return res.all()[0]

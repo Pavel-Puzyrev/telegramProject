@@ -1,14 +1,12 @@
-from datetime import datetime
 import logging
-from decimal import Decimal
-from pathlib import Path
-from typing import Dict, Tuple, Any, Optional
+from datetime import datetime
+from typing import Any, Annotated
 
-from fastapi import APIRouter, UploadFile, Query
-from sqlalchemy import Row
+from fastapi import APIRouter, UploadFile, Depends, HTTPException
+from starlette import status
 
-from app.schemas import data as sch
 from app.deps.db import RepoDataDep
+from app.schemas import data as sch
 
 data_router = APIRouter()
 
@@ -18,35 +16,40 @@ logger = logging.getLogger(__name__)
 @data_router.post("/write")
 def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
     jsn = file.file.read().decode("utf-8")
-    sch_model = data_repo.write_json_to_db(jsn)
     try:
-        print(sch_model.messages[0].id)
+        data_repo.write_json_to_db(jsn)
+        return {"status": "ok"}
     except Exception as e:
-        print(e)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail={
+                                "status": "error",
+                                "data": None,
+                                "details": e
+                            })
 
 
 @data_router.get("/count-messages")
-def count_messages_by_user_id(
+def count_messages(
         data_repo: RepoDataDep,
         user_name="Pavel P",
-        # data_start,
-        # data_end,
-):
+        data_start: datetime = datetime.fromtimestamp(0),
+        data_end: datetime = datetime.now(),
+) -> dict[str, int]:
     cnt = data_repo.count_messages(
         user_name,
-        # data_start,
-        # data_end,
+        data_start,
+        data_end,
     )
     return {"count": cnt}
 
 
 @data_router.get("/count-messages-per-hour")
-def count_messages_by_user_id(
+def count_messages_per_hour(
         data_repo: RepoDataDep,
         user_name: str = "Pavel P",
         data_start: datetime = datetime.fromtimestamp(0),
         data_end: datetime = datetime.now(),
-) -> list[sch.CountMessagesByUserId]:
+) -> list[sch.CountMessagesByUserOut]:
     cnt = data_repo.count_messages_per_hour(
         user_name,
         data_start,
@@ -54,100 +57,116 @@ def count_messages_by_user_id(
     )
     res = []
     for row in cnt:
-        res.append(sch.CountMessagesByUserId(timestamp=row[0], count=row[1]))
+        res.append(sch.CountMessagesByUserOut(timestamp=row[0], count=row[1]))
     return res
 
 
 @data_router.put("/count-word")
-def count_words_in_messages(
+def count_words_in_messages(body: Annotated[sch.CountWordsInMessagesIn, Depends()],
+                            data_repo: RepoDataDep) -> dict[str, Any]:
+    res = data_repo.count_words_in_messages(
+        **body.model_dump()
+    )
+    return {"count of messages": res[0],
+            "count of words": res[1],
+            "word_per_msg": round(res[2], 2)
+            }
+
+
+@data_router.put("/count-messages-for-24-hours")
+def count_messages_for_24_hours(
         data_repo: RepoDataDep,
-        user_names: list[str]|None = None,
+        user_name: str,
+        list_of_month: list[int] = [x for x in range(1, 13)],
         data_start: datetime = datetime.fromtimestamp(0),
         data_end: datetime = datetime.now(),
-) -> dict[str, Any]:
-    cnt = data_repo.count_word(
-        user_names,
+) -> dict[float, int]:
+    cnt = data_repo.count_messages_for_24_hours(
+        user_name,
         data_start,
         data_end,
+        list_of_month,
     )
-    res = cnt[0]
-    return {"count": res[0], "sum": res[1], "word_per_msg": round(res[2], 2)}
+    res = dict()
+    for i in cnt:
+        res.update({i[0]: i[1]})
+    return res
+# TODO сделать единый ответ как для матплотлиба
 
-
-@data_router.post("/convert")
-async def convert_tlg_json_to_db(file: UploadFile, data_repo: RepoDataDep):
-    jsn = await file.read()
-
-    fake_db = sch.DialogModel.model_validate_json(json_data=jsn)
-
-    print(fake_db.id)
-    print(fake_db.name)
-    print(fake_db.type)
-
-    all_messages: list[sch.Message] = fake_db.messages
-    message_set = sch.MessageSet()
-
-    def print_field_gamut(attr_name: str, list_of_schemes: list[sch.BaseModel]) -> str:
-        nonlocal message_set
-        # if attr_name.find("text") != -1 or attr_name.find("date") != -1 or attr_name.find("id") != -1:
-        #     return None
-        _ = set()
-        for scheme_obj in list_of_schemes:
-            # attr = None
-            if attr_name is not None:
-                attr = getattr(scheme_obj, attr_name)
-            if attr is None:
-                add_to_set = getattr(message_set, attr_name)
-                add_to_set.add(None)
-                setattr(message_set, attr_name, add_to_set)
-                # _.add(None)
-            if not isinstance(attr, list | dict | set | tuple | sch.BaseModel):
-                add_to_set = getattr(message_set, attr_name)
-                add_to_set.add(attr)
-                setattr(message_set, attr_name, add_to_set)
-                # _.add(attr)
-            else:
-                add_to_set = getattr(message_set, attr_name)
-                add_to_set.add(type(attr))
-                setattr(message_set, attr_name, add_to_set)
-
-                # _.add(type(attr))
-            # else: print("oh, fuck")
-        # pprint.pprint(_)
-        # print(f"{attr_name}:{_ if len(_) > 0 else " ALWAYS NONE"}")
-        # return f"{attr_name}:{_}"
-        return getattr(message_set, attr_name)
-
-    def write_to_file(list_of_schemes: list[sch.BaseModel]) -> list[str]:
-        string_input = []
-        # for attr_name in scheme_class.__fields__.keys():
-        for attr_name in list_of_schemes[0].__fields__.keys():
-            string_input.append(print_field_gamut(attr_name, list_of_schemes))
-        return string_input
-
-    base_dir = Path(__file__).resolve().parent.parent.parent
-    file_out = base_dir / 'resources' / 'out.json'
-    list_to_write = write_to_file(all_messages)
-    with open(file_out, encoding="utf_8", mode="w") as fw:
-        fw.write(message_set.model_dump_json(
-            by_alias=True,
-            exclude={
-                "poll",
-                "text",
-                "text_entities",
-                "members",
-
-                "id",
-                "date",
-                "date_unixtime",
-                "edited",
-                "edited_unixtime",
-                "message_id",
-                "reply_to_message_id",
-                "forwarded_from",
-            },
-            indent=None
-        ))
-
-    # data_repo.convert()
-    return {"OK": "Converted"}
+# @data_router.post("/convert")
+# async def convert_tlg_json_to_db(file: UploadFile, data_repo: RepoDataDep):
+#     jsn = await file.read()
+#
+#     fake_db = sch.DialogModel.model_validate_json(json_data=jsn)
+#
+#     print(fake_db.id)
+#     print(fake_db.name)
+#     print(fake_db.type)
+#
+#     all_messages: list[sch.Message] = fake_db.messages
+#     message_set = sch.MessageSet()
+#
+#     def print_field_gamut(attr_name: str, list_of_schemes: list[sch.BaseModel]) -> str:
+#         nonlocal message_set
+#         # if attr_name.find("text") != -1 or attr_name.find("date") != -1 or attr_name.find("id") != -1:
+#         #     return None
+#         _ = set()
+#         for scheme_obj in list_of_schemes:
+#             # attr = None
+#             if attr_name is not None:
+#                 attr = getattr(scheme_obj, attr_name)
+#             if attr is None:
+#                 add_to_set = getattr(message_set, attr_name)
+#                 add_to_set.add(None)
+#                 setattr(message_set, attr_name, add_to_set)
+#                 # _.add(None)
+#             if not isinstance(attr, list | dict | set | tuple | sch.BaseModel):
+#                 add_to_set = getattr(message_set, attr_name)
+#                 add_to_set.add(attr)
+#                 setattr(message_set, attr_name, add_to_set)
+#                 # _.add(attr)
+#             else:
+#                 add_to_set = getattr(message_set, attr_name)
+#                 add_to_set.add(type(attr))
+#                 setattr(message_set, attr_name, add_to_set)
+#
+#                 # _.add(type(attr))
+#             # else: print("oh, fuck")
+#         # pprint.pprint(_)
+#         # print(f"{attr_name}:{_ if len(_) > 0 else " ALWAYS NONE"}")
+#         # return f"{attr_name}:{_}"
+#         return getattr(message_set, attr_name)
+#
+#     def write_to_file(list_of_schemes: list[sch.BaseModel]) -> list[str]:
+#         string_input = []
+#         # for attr_name in scheme_class.__fields__.keys():
+#         for attr_name in list_of_schemes[0].__fields__.keys():
+#             string_input.append(print_field_gamut(attr_name, list_of_schemes))
+#         return string_input
+#
+#     base_dir = Path(__file__).resolve().parent.parent.parent
+#     file_out = base_dir / 'resources' / 'out.json'
+#     list_to_write = write_to_file(all_messages)
+#     with open(file_out, encoding="utf_8", mode="w") as fw:
+#         fw.write(message_set.model_dump_json(
+#             by_alias=True,
+#             exclude={
+#                 "poll",
+#                 "text",
+#                 "text_entities",
+#                 "members",
+#
+#                 "id",
+#                 "date",
+#                 "date_unixtime",
+#                 "edited",
+#                 "edited_unixtime",
+#                 "message_id",
+#                 "reply_to_message_id",
+#                 "forwarded_from",
+#             },
+#             indent=None
+#         ))
+#
+#     # data_repo.convert()
+#     return {"OK": "Converted"}

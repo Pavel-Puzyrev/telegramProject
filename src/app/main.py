@@ -12,15 +12,21 @@ configure_loggers(
     site_logger_names=settings.site_loggers_list
 )
 
-app = FastAPI(debug=settings.debug)
+app = FastAPI(
+    title="Pavel's rest project",
+    description="this project allows transfer tlg json to db and get some statistics",
+    version="0.1.0",
+    debug=settings.debug
+)
 app.include_router(main_router, prefix="/api/v1")
 
-@app.on_event("startup")
-async def startup_event():
-    _main(is_drop=True)
-    _main(is_drop=False)
-    ...
-    # create_fake_users(UsersRepository(session=session_maker()), n=5)
+
+# @app.on_event("startup")
+# async def startup_event():
+#     _main(is_drop=True)
+#     _main(is_drop=False)
+#     ...
+#     # create_fake_users(UsersRepository(session=session_maker()), n=5)
 
 
 @app.get('/')

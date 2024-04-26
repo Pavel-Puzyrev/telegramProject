@@ -3,11 +3,9 @@ from __future__ import annotations
 import datetime
 from typing import Annotated
 
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table, BigInteger
-from sqlalchemy.orm import declarative_base, relationship
-from sqlalchemy.sql.sqltypes import DateTime
+from sqlalchemy import Integer, ForeignKey, BigInteger
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import relationship
 
 intpk = Annotated[int, mapped_column(Integer, primary_key=True)]
 
@@ -32,32 +30,33 @@ class Message(Base):
     id: Mapped[intpk]
     type: Mapped[str]
     date: Mapped[datetime.datetime]
-    # date_unixtime: Mapped[str]
     edited: Mapped[datetime.datetime | None]
-    # edited_unixtime: Mapped[str | None]
     from_: Mapped[str | None]
     from_id: Mapped[str | None]
     reply_to_message_id: Mapped[int | None]
-    # poll_id: Mapped[int | None] = mapped_column(ForeignKey('polls.id'))
     message_id: Mapped[int | None]
+    media_type: Mapped[str | None]
+    mime_type: Mapped[str | None]
+    # date_unixtime: Mapped[str]
+    # edited_unixtime: Mapped[str | None]
+    # poll_id: Mapped[int | None] = mapped_column(ForeignKey('polls.id'))
     # forwarded_from: Mapped[str | None]
     # photo: Mapped[str | None]
     # file: Mapped[str | None]
     # thumbnail: Mapped[str | None]
-    media_type: Mapped[str | None]
-    mime_type: Mapped[str | None]
     # duration_seconds: Mapped[int | None]
     # width: Mapped[int | None]
     # height: Mapped[int | None]
     # sticker_emoji: Mapped[str | None]
     # text: Mapped[str | None]  # Note: complex JSON structure might need handling
     # text_entities
+    # members: Mapped[list[str]] = mapped_column(...)
+    # dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id'), primary_key=True)
     actor: Mapped[str | None]
     actor_id: Mapped[str | None]
     action: Mapped[str | None]
     title: Mapped[str | None]
-    # members: Mapped[list[str]] = mapped_column(...)
-    dialogmodel_id: Mapped[int] = mapped_column(ForeignKey('dialogs.id'))
+    dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id'))
 
     dialog: Mapped["DialogModel"] = relationship(
         back_populates="messages"
