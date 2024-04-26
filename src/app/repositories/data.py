@@ -6,6 +6,7 @@ from sqlalchemy.orm import aliased
 from app.db import models as orm
 from app.repositories.base import BaseRepository
 from app.schemas import data as sch
+from app.util import core
 
 
 class DataRepository(BaseRepository):
@@ -109,9 +110,9 @@ class DataRepository(BaseRepository):
                                     user_name: str,
                                     data_start: datetime,
                                     data_end: datetime,
-                                    list_of_month: list[int],
+                                    first_month: int | None,
+                                    finish_month: int | None,
                                     ) -> list[tuple[float, int]]:
-        # TODO Чтобы не лист месяцев принимался, а диапазон 3-6 11-2
         """
         select msg, count(msg)
         from (select date_part('hour', date_trunc('hour', date)) as msg
@@ -122,6 +123,14 @@ class DataRepository(BaseRepository):
         group by msg
         order by msg
         """
+        if first_month is None and finish_month is None:
+            list_of_month = list(range(1, 13))
+        else:
+            if first_month is None:
+                first_month = finish_month
+            elif finish_month is None:
+                finish_month = first_month
+            list_of_month = core.get_month_list(first_month, finish_month)
 
         subq = (select(func.date_part('hour', func.date_trunc('hour', orm.Message.date)).cast(Integer).label('msg'))
                 .filter(orm.Message.date.between(data_start, data_end))

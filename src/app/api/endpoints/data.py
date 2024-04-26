@@ -2,7 +2,7 @@ import logging
 from datetime import datetime
 from typing import Any, Annotated
 
-from fastapi import APIRouter, UploadFile, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, Depends, HTTPException, Query
 from starlette import status
 
 from app.deps.db import RepoDataDep
@@ -73,19 +73,21 @@ def count_words_in_messages(body: Annotated[sch.CountWordsInMessagesIn, Depends(
             }
 
 
-@data_router.put("/count-messages-for-24-hours")
+@data_router.get("/count-messages-for-24-hours")
 def count_messages_for_24_hours(
         data_repo: RepoDataDep,
         user_name: str,
-        list_of_month: list[int] = [x for x in range(1, 13)],
         data_start: datetime = datetime.fromtimestamp(0),
         data_end: datetime = datetime.now(),
+        first_month: Annotated[int | None, Query(ge=1, le=12)] = None,
+        finish_month: Annotated[int | None, Query(ge=1, le=12)] = None,
 ) -> dict[float, int]:
     cnt = data_repo.count_messages_for_24_hours(
         user_name,
         data_start,
         data_end,
-        list_of_month,
+        first_month,
+        finish_month,
     )
     res = dict()
     for i in cnt:
