@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select, func, Integer
+from sqlalchemy import select, func, Integer, delete
 from sqlalchemy.orm import aliased
 
 from app.db import models as orm
@@ -29,6 +29,18 @@ class DataRepository(BaseRepository):
 
         self.session.commit()
         return fake_db
+
+    def get_dialog_list(self):
+        query = select(orm.DialogModel.id)
+        res = self.session.execute(query).scalars().all()
+        return res
+
+    def delete_dialog(self, dialog_id:int):
+
+        self.session.delete(self.session.query(orm.DialogModel).get(dialog_id))
+        # stmt = delete(orm.DialogModel).filter(orm.DialogModel.id == dialog_id)
+        # self.session.execute(stmt)
+        self.session.commit()
 
     def get_users(self) -> list[str]:
         query = select(orm.Message.from_).distinct(orm.Message.from_).filter(orm.Message.from_.isnot(None))

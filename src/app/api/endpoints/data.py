@@ -12,9 +12,19 @@ data_router = APIRouter()
 
 logger = logging.getLogger(__name__)
 
-
 # TODO: добавить получение списка людей
 # TODO: сделать единый ответ как для матплотлиба
+'''
+x = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май']
+y = [2, 4, 3, 1, 7]
+
+plt.bar(x, y, label='Величина прибыли') #Параметр label позволяет задать название величины для легенды
+plt.xlabel('Месяц года')
+plt.ylabel('Прибыль, в млн руб.')
+plt.title('Пример столбчатой диаграммы')
+'''
+
+
 # TODO: добавить DEL таблиц каскад
 # TODO: разнести по роутерам get и DDL
 
@@ -34,7 +44,27 @@ def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
                             })
 
 
-@data_router.get("/get_users")
+@data_router.get("/get-dialog-list")
+def get_dialog_list(data_repo: RepoDataDep) \
+        -> dict[str, list[int]]:
+    dialog_list = data_repo.get_dialog_list()
+    return {"dialog list": dialog_list}
+
+
+@data_router.delete("/delete-dialog-by-id")
+def delete_dialog_by_id(
+        data_repo: RepoDataDep,
+        dialog_id:int
+):
+    data_repo.delete_dialog(dialog_id)
+    return {
+        "status": "success",
+        "data": None,
+        "details": None
+    }
+
+
+@data_router.get("/get-users")
 def get_users(data_repo: RepoDataDep) -> dict[str, list[str]]:
     return {"users": data_repo.get_users()}
 

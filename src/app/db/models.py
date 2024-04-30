@@ -21,7 +21,9 @@ class DialogModel(Base):
     type: Mapped[str]
 
     messages: Mapped[list["Message"]] = relationship(
-        back_populates="dialog"
+        back_populates="dialog",
+        cascade="all,delete",
+        passive_deletes=True,
     )
 
 
@@ -56,14 +58,16 @@ class Message(Base):
     actor_id: Mapped[str | None]
     action: Mapped[str | None]
     title: Mapped[str | None]
-    dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id'))
+    dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id', ondelete='CASCADE'))
 
     dialog: Mapped["DialogModel"] = relationship(
-        back_populates="messages"
+        back_populates="messages",
     )
 
     text_entities: Mapped[list["TextEntity"]] = relationship(
-        back_populates="messages"
+        back_populates="messages",
+        cascade="all,delete",
+        passive_deletes=True,
     )
     # Relationships
     # poll: Mapped[Poll] = relationship(back_populates="messages")
@@ -77,7 +81,7 @@ class TextEntity(Base):
     href: Mapped[str | None]
     document_id: Mapped[str | None]
     user_id: Mapped[int | None] = mapped_column(BigInteger)
-    message_id: Mapped[int] = mapped_column(ForeignKey('messages.id'))
+    message_id: Mapped[int] = mapped_column(ForeignKey('messages.id', ondelete='CASCADE'))
 
     messages: Mapped["Message"] = relationship(
         back_populates="text_entities"
