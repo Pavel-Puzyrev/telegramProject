@@ -2,8 +2,7 @@ import logging
 from datetime import datetime
 from typing import Any, Annotated
 
-from fastapi import APIRouter, UploadFile, Depends, HTTPException, Query
-from starlette import status
+from fastapi import APIRouter, Depends, Query
 
 from app.deps.db import RepoDataDep
 from app.schemas import data as sch
@@ -11,57 +10,6 @@ from app.schemas import data as sch
 data_router = APIRouter()
 
 logger = logging.getLogger(__name__)
-
-# TODO: добавить получение списка людей
-# TODO: сделать единый ответ как для матплотлиба
-'''
-x = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май']
-y = [2, 4, 3, 1, 7]
-
-plt.bar(x, y, label='Величина прибыли') #Параметр label позволяет задать название величины для легенды
-plt.xlabel('Месяц года')
-plt.ylabel('Прибыль, в млн руб.')
-plt.title('Пример столбчатой диаграммы')
-'''
-
-
-# TODO: добавить DEL таблиц каскад
-# TODO: разнести по роутерам get и DDL
-
-
-@data_router.post("/write")
-def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
-    jsn = file.file.read().decode("utf-8")
-    try:
-        data_repo.write_json_to_db(jsn)
-        return {"status": "ok"}
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                            detail={
-                                "status": "error",
-                                "data": None,
-                                "details": e
-                            })
-
-
-@data_router.get("/get-dialog-list")
-def get_dialog_list(data_repo: RepoDataDep) \
-        -> dict[str, list[int]]:
-    dialog_list = data_repo.get_dialog_list()
-    return {"dialog list": dialog_list}
-
-
-@data_router.delete("/delete-dialog-by-id")
-def delete_dialog_by_id(
-        data_repo: RepoDataDep,
-        dialog_id:int
-):
-    data_repo.delete_dialog(dialog_id)
-    return {
-        "status": "success",
-        "data": None,
-        "details": None
-    }
 
 
 @data_router.get("/get-users")
@@ -73,13 +21,13 @@ def get_users(data_repo: RepoDataDep) -> dict[str, list[str]]:
 def count_messages(
         data_repo: RepoDataDep,
         user_name="Pavel P",
-        data_start: datetime = datetime.fromtimestamp(0),
-        data_end: datetime = datetime.now(),
+        date_start: datetime = datetime.fromtimestamp(0),
+        date_end: datetime = datetime.now(),
 ) -> dict[str, int]:
     cnt = data_repo.count_messages(
         user_name,
-        data_start,
-        data_end,
+        date_start,
+        date_end,
     )
     return {"count": cnt}
 
@@ -88,13 +36,13 @@ def count_messages(
 def count_messages_per_hour(
         data_repo: RepoDataDep,
         user_name: str = "Pavel P",
-        data_start: datetime = datetime.fromtimestamp(0),
-        data_end: datetime = datetime.now(),
+        date_start: datetime = datetime.fromtimestamp(0),
+        date_end: datetime = datetime.now(),
 ) -> list[sch.CountMessagesByUserOut]:
     cnt = data_repo.count_messages_per_hour(
         user_name,
-        data_start,
-        data_end,
+        date_start,
+        date_end,
     )
     res = []
     for row in cnt:
@@ -118,15 +66,15 @@ def count_words_in_messages(body: Annotated[sch.CountWordsInMessagesIn, Depends(
 def count_messages_for_24_hours(
         data_repo: RepoDataDep,
         user_name: str,
-        data_start: datetime = datetime.fromtimestamp(0),
-        data_end: datetime = datetime.now(),
+        date_start: datetime = datetime.fromtimestamp(0),
+        date_end: datetime = datetime.now(),
         first_month: Annotated[int | None, Query(ge=1, le=12)] = None,
         finish_month: Annotated[int | None, Query(ge=1, le=12)] = None,
 ) -> dict[float, int]:
     cnt = data_repo.count_messages_for_24_hours(
         user_name,
-        data_start,
-        data_end,
+        date_start,
+        date_end,
         first_month,
         finish_month,
     )

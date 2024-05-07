@@ -14,21 +14,21 @@ class Base(DeclarativeBase):
     pass
 
 
-class DialogModel(Base):
-    __tablename__ = 'dialogs'
+class TgChats(Base):
+    __tablename__ = 'tg_chats'
     id: Mapped[intpk]
     name: Mapped[str]
     type: Mapped[str]
 
-    messages: Mapped[list["Message"]] = relationship(
-        back_populates="dialog",
+    tg_messages: Mapped[list["TgMessages"]] = relationship(
+        back_populates="tg_chat",
         cascade="all,delete",
         passive_deletes=True,
     )
 
 
-class Message(Base):
-    __tablename__ = 'messages'
+class TgMessages(Base):
+    __tablename__ = 'tg_messages'
     id: Mapped[intpk]
     type: Mapped[str]
     date: Mapped[datetime.datetime]
@@ -58,33 +58,33 @@ class Message(Base):
     actor_id: Mapped[str | None]
     action: Mapped[str | None]
     title: Mapped[str | None]
-    dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id', ondelete='CASCADE'))
+    tg_chat_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('tg_chats.id', ondelete='CASCADE'))
 
-    dialog: Mapped["DialogModel"] = relationship(
-        back_populates="messages",
+    tg_chat: Mapped["TgChats"] = relationship(
+        back_populates="tg_messages",
     )
 
-    text_entities: Mapped[list["TextEntity"]] = relationship(
-        back_populates="messages",
+    tg_text_entities: Mapped[list["TgTextEntity"]] = relationship(
+        back_populates="tg_messages",
         cascade="all,delete",
         passive_deletes=True,
     )
     # Relationships
-    # poll: Mapped[Poll] = relationship(back_populates="messages")
+    # poll: Mapped[Poll] = relationship(back_populates="tg_messages")
 
 
-class TextEntity(Base):
-    __tablename__ = "textentity"
+class TgTextEntity(Base):
+    __tablename__ = "tg_textentity"
     id: Mapped[intpk]
     type: Mapped[str | None]
     text: Mapped[str | None]
     href: Mapped[str | None]
     document_id: Mapped[str | None]
     user_id: Mapped[int | None] = mapped_column(BigInteger)
-    message_id: Mapped[int] = mapped_column(ForeignKey('messages.id', ondelete='CASCADE'))
+    message_id: Mapped[int] = mapped_column(ForeignKey('tg_messages.id', ondelete='CASCADE'))
 
-    messages: Mapped["Message"] = relationship(
-        back_populates="text_entities"
+    tg_messages: Mapped["TgMessages"] = relationship(
+        back_populates="tg_text_entities"
     )
 
 

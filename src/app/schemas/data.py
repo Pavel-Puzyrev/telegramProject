@@ -1,7 +1,13 @@
 from datetime import datetime
+from enum import StrEnum, auto
 from typing import Optional, Any
 
 from pydantic import BaseModel, Field
+
+
+# class Foo(StrEnum):
+#     baz = auto()
+#     bar = auto()
 
 
 class TextEntity(BaseModel):
@@ -48,7 +54,7 @@ class Message(BaseModel):
     # members: Optional[list[str | None]] = None
 
 
-class DialogModel(BaseModel):
+class ChatModel(BaseModel):
     name: str
     type: str
     id: int

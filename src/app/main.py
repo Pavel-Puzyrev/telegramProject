@@ -7,6 +7,53 @@ from app.config import settings
 from app.db.main import _main
 from app.util.logging import configure_loggers
 
+# TODO: беграунд таск на загрузку джейсона
+# TODO: вывести юзеров в отдельную таблицу, соотношения с сообщениями и чатами
+# TODO: добавить таблицу users, users chats many to many
+# TODO: возможно приведение айди к инту и фильтрованию не-юзеров
+# TODO: догрузка чатов, проверка на сущестовование и апдейт только новых данных
+# TODO: запросы по юзер айди
+# TODO: добавить получение списка людей
+# TODO: универсальная ручка по получению статы по месяцам-дням недели
+# TODO: /write refactor output, сначала в зависимости делаешь валидацию начальную файла, с точки зрения того,
+#  что это вообще джейсон формат. потом пайдентик делает валидацию данных в нём
+# ok TODO: add prefix tg_*
+# ok TODO: разнести по роутерам get и DDL
+# ok TODO: добавить DEL таблиц каскад
+# ok TODO: dialogs -> chats
+
+
+# TODO: сделать единый ответ как для матплотлиба
+'''
+class Value (BaseModel) :
+    label: str
+    value: float
+    # value2: str
+    # value3: str
+
+class ChartData:
+    title: str
+    values: list[Value]
+
+# 2:
+
+class ChartArrData:
+    labels: list[str]
+    values: list[float]
+    # values2: list[float]
+    # values3: list[float]
+
+x = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май']
+y = [2, 4, 3, 1, 7]
+
+plt.bar(x, y, label='Величина прибыли') #Параметр label позволяет задать название величины для легенды
+plt.xlabel('Месяц года')
+plt.ylabel('Прибыль, в млн руб.')
+plt.title('Пример столбчатой диаграммы')
+'''
+
+
+
 configure_loggers(
     log_level=settings.log_level,
     site_logger_names=settings.site_loggers_list
