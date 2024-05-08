@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, UploadFile, HTTPException
+from fastapi import APIRouter, UploadFile, HTTPException, BackgroundTasks
 from starlette import status
 
 from app.deps.db import RepoDataDep
@@ -11,9 +11,11 @@ logger = logging.getLogger(__name__)
 
 
 @chat_router.post("/write")
-def write_json_to_db(file: UploadFile, data_repo: RepoDataDep):
+def write_json_to_db(file: UploadFile, data_repo: RepoDataDep, background_tasks: BackgroundTasks):
     jsn = file.file.read().decode("utf-8")
-    data_repo.write_json_to_db(jsn)
+    background_tasks.add_task(data_repo.write_json_to_db, jsn)
+    return {"message": "Json file is accepted for downloading in the background"}
+
 
 
 @chat_router.get("/get-chat-list")

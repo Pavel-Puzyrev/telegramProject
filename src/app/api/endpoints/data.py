@@ -13,19 +13,19 @@ logger = logging.getLogger(__name__)
 
 
 @data_router.get("/get-users")
-def get_users(data_repo: RepoDataDep) -> dict[str, list[str]]:
+def get_users(data_repo: RepoDataDep) -> dict[str, list[tuple]]:
     return {"users": data_repo.get_users()}
 
 
 @data_router.get("/count-messages")
 def count_messages(
         data_repo: RepoDataDep,
-        user_name="Pavel P",
+        user_id="user576909227",
         date_start: datetime = datetime.fromtimestamp(0),
         date_end: datetime = datetime.now(),
 ) -> dict[str, int]:
     cnt = data_repo.count_messages(
-        user_name,
+        user_id,
         date_start,
         date_end,
     )
@@ -35,12 +35,12 @@ def count_messages(
 @data_router.get("/count-messages-per-hour")
 def count_messages_per_hour(
         data_repo: RepoDataDep,
-        user_name: str = "Pavel P",
+        user_id: str = "user576909227",
         date_start: datetime = datetime.fromtimestamp(0),
         date_end: datetime = datetime.now(),
 ) -> list[sch.CountMessagesByUserOut]:
     cnt = data_repo.count_messages_per_hour(
-        user_name,
+        user_id,
         date_start,
         date_end,
     )
@@ -65,14 +65,14 @@ def count_words_in_messages(body: Annotated[sch.CountWordsInMessagesIn, Depends(
 @data_router.get("/count-messages-for-24-hours")
 def count_messages_for_24_hours(
         data_repo: RepoDataDep,
-        user_name: str,
+        user_id: str,
         date_start: datetime = datetime.fromtimestamp(0),
         date_end: datetime = datetime.now(),
         first_month: Annotated[int | None, Query(ge=1, le=12)] = None,
         finish_month: Annotated[int | None, Query(ge=1, le=12)] = None,
 ) -> dict[float, int]:
     cnt = data_repo.count_messages_for_24_hours(
-        user_name,
+        user_id,
         date_start,
         date_end,
         first_month,

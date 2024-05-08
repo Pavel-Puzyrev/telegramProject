@@ -98,9 +98,9 @@ class CountMessagesByUserOut(BaseModel):
 
 
 class CountWordsInMessagesIn(BaseModel):
-    user_names: list[str] | None = None
-    data_start: datetime = datetime.fromtimestamp(0)
-    data_end: datetime = datetime.now()
+    users_id: list[str] | None = None
+    date_start: datetime = datetime.fromtimestamp(0)
+    date_end: datetime = datetime.now()
 
 # class TextItem(BaseModel):
 #     type: str

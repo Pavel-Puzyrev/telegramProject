@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select, func, Integer, delete, insert
+from sqlalchemy import select, func, Integer, delete, insert, Row
 from sqlalchemy.orm import aliased
 
 from app.db import models as orm
@@ -11,16 +11,16 @@ from app.util import core
 
 class DataRepository(BaseRepository):
     def write_json_to_db(self, jsn: bytes) -> sch.ChatModel:
-        fake_db = sch.ChatModel.model_validate_json(json_data=jsn)
+        db_scheme = sch.ChatModel.model_validate_json(json_data=jsn)
 
         # Создаем и добавляем диалог
-        tg_chat_model = orm.TgChats(**fake_db.model_dump(exclude={'messages'}))
+        tg_chat_model = orm.TgChats(**db_scheme.model_dump(exclude={'messages'}))
         self.session.add(tg_chat_model)
         self.session.flush()
 
-        for jsn_message in fake_db.messages:
+        for jsn_message in db_scheme.messages:
             # Обработка сообщений
-            message = orm.TgMessages(**jsn_message.model_dump(exclude={"text_entities"}), tg_chat_model_id=fake_db.id)
+            message = orm.TgMessages(**jsn_message.model_dump(exclude={"text_entities"}), tg_chat_model_id=db_scheme.id)
             self.session.add(message)
 
             for text_ent in jsn_message.text_entities:
@@ -29,7 +29,7 @@ class DataRepository(BaseRepository):
                 self.session.add(text_entity)
 
         self.session.commit()
-        return fake_db
+        return db_scheme
 
     def get_chat_list(self):
         query = select(orm.TgChats.id)
@@ -43,13 +43,14 @@ class DataRepository(BaseRepository):
         # self.session.execute(stmt)
         self.session.commit()
 
-    def get_users(self) -> list[str]:
-        query = select(orm.TgMessages.from_id).distinct(orm.TgMessages.from_id).filter(orm.TgMessages.from_.isnot(None))
-        return self.session.scalars(query).all()
+    def get_users(self) -> list[tuple[str, str]]:
+        query = select(orm.TgMessages.from_id, orm.TgMessages.from_).distinct(orm.TgMessages.from_id).filter(
+            orm.TgMessages.from_id.isnot(None))
+        return [(row[0], row[1]) for row in self.session.execute(query).all()]
 
     def count_messages(
             self,
-            user_name: str,
+            user_id: str,
             date_start: datetime,
             date_end: datetime,
     ) -> int:
@@ -68,16 +69,16 @@ class DataRepository(BaseRepository):
             )
             .select_from(m)
             .join(t, m.id == t.message_id)
-            .filter(m.from_.contains(user_name))
+            .filter(m.from_id.contains(user_id))
             .filter(m.date.between(date_start, date_end))
-            .group_by(m.from_)
+            .group_by(m.from_id)
         )
         res = self.session.execute(query)
         result = res.scalar()
         return result
 
     def count_messages_per_hour(self,
-                                user_name: str,
+                                user_id: str,
                                 date_start: datetime,
                                 date_end: datetime,
                                 ) -> list[tuple[datetime, int]]:
@@ -101,12 +102,12 @@ class DataRepository(BaseRepository):
         cte = ((
                    select(
                        m.id,
-                       m.from_,
+                       m.from_id,
                        m.date,
                        func.date_trunc('hour', m.date).label('datetr'),
                        func.count(m.id).over(partition_by=func.date_trunc('hour', m.date)).label('wind')
                    )
-                   .filter(m.from_.contains(user_name))
+                   .filter(m.from_id.contains(user_id))
                    .filter(m.date.between(date_start, date_end))
                )
                .cte('subq')
@@ -124,7 +125,7 @@ class DataRepository(BaseRepository):
         return res.all()
 
     def count_messages_for_24_hours(self,
-                                    user_name: str,
+                                    user_id: str,
                                     date_start: datetime,
                                     date_end: datetime,
                                     first_month: int | None,
@@ -151,7 +152,7 @@ class DataRepository(BaseRepository):
 
         subq = (select(func.date_part('hour', func.date_trunc('hour', orm.TgMessages.date)).cast(Integer).label('msg'))
                 .filter(orm.TgMessages.date.between(date_start, date_end))
-                .filter(orm.TgMessages.from_.like(user_name))
+                .filter(orm.TgMessages.from_id.like(user_id))
                 .filter((func.date_part('month', orm.TgMessages.date).cast(Integer)).in_(list_of_month))
                 .subquery("subq"))
         query = (select(subq.c.msg, func.count(subq.c.msg))
@@ -162,7 +163,7 @@ class DataRepository(BaseRepository):
         return res.all()
 
     def count_words_in_messages(self,
-                                user_names: list[str],
+                                users_id: list[str],
                                 date_start: datetime,
                                 date_end: datetime,
                                 ) -> tuple[int, int, float]:
@@ -195,7 +196,7 @@ class DataRepository(BaseRepository):
             .filter(m.date.between(date_start, date_end))
         )
 
-        if user_names is not None and user_names:
-            query = query.filter(m.from_.in_(user_names))
+        if users_id is not None and users_id:
+            query = query.filter(m.from_id.in_(users_id))
         res = self.session.execute(query)
         return res.all()[0]
