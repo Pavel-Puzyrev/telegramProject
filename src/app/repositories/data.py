@@ -13,14 +13,26 @@ class DataRepository(BaseRepository):
     def write_json_to_db(self, jsn: bytes) -> sch.ChatModel:
         db_scheme = sch.ChatModel.model_validate_json(json_data=jsn)
 
+        user_set = {}
+
         # Создаем и добавляем диалог
         tg_chat_model = orm.TgChats(**db_scheme.model_dump(exclude={'messages'}))
         self.session.add(tg_chat_model)
         self.session.flush()
 
         for jsn_message in db_scheme.messages:
+            user_set[jsn_message.from_id] = jsn_message.from_
+
+        for user_id, user in user_set.items():
+            user_name = orm.TgUserNames(from_id=user_id, from_=user)
+            self.session.add(user_name)
+
+        self.session.flush()
+
+        for jsn_message in db_scheme.messages:
             # Обработка сообщений
-            message = orm.TgMessages(**jsn_message.model_dump(exclude={"text_entities"}), tg_chat_model_id=db_scheme.id)
+            message = orm.TgMessages(**jsn_message.model_dump(exclude={"text_entities", "from_"}),
+                                     tg_chat_model_id=db_scheme.id)
             self.session.add(message)
 
             for text_ent in jsn_message.text_entities:
@@ -44,8 +56,7 @@ class DataRepository(BaseRepository):
         self.session.commit()
 
     def get_users(self) -> list[tuple[str, str]]:
-        query = select(orm.TgMessages.from_id, orm.TgMessages.from_).distinct(orm.TgMessages.from_id).filter(
-            orm.TgMessages.from_id.isnot(None))
+        query = select(orm.TgUserNames.from_id, orm.TgUserNames.from_).filter(orm.TgUserNames.from_id.isnot(None))
         return [(row[0], row[1]) for row in self.session.execute(query).all()]
 
     def count_messages(

@@ -3,7 +3,7 @@ from __future__ import annotations
 import datetime
 from typing import Annotated
 
-from sqlalchemy import Integer, ForeignKey, BigInteger
+from sqlalchemy import Integer, ForeignKey, BigInteger, UniqueConstraint, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.orm import relationship
 
@@ -33,27 +33,12 @@ class TgMessages(Base):
     type: Mapped[str]
     date: Mapped[datetime.datetime]
     edited: Mapped[datetime.datetime | None]
-    from_: Mapped[str | None]
-    from_id: Mapped[str | None]
+    # from_: Mapped[str | None]
+    from_id: Mapped[str | None] = mapped_column(String, ForeignKey('tg_user_names.from_id', ondelete='CASCADE'))
     reply_to_message_id: Mapped[int | None]
     message_id: Mapped[int | None]
     media_type: Mapped[str | None]
     mime_type: Mapped[str | None]
-    # date_unixtime: Mapped[str]
-    # edited_unixtime: Mapped[str | None]
-    # poll_id: Mapped[int | None] = mapped_column(ForeignKey('polls.id'))
-    # forwarded_from: Mapped[str | None]
-    # photo: Mapped[str | None]
-    # file: Mapped[str | None]
-    # thumbnail: Mapped[str | None]
-    # duration_seconds: Mapped[int | None]
-    # width: Mapped[int | None]
-    # height: Mapped[int | None]
-    # sticker_emoji: Mapped[str | None]
-    # text: Mapped[str | None]  # Note: complex JSON structure might need handling
-    # text_entities
-    # members: Mapped[list[str]] = mapped_column(...)
-    # dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id'), primary_key=True)
     actor: Mapped[str | None]
     actor_id: Mapped[str | None]
     action: Mapped[str | None]
@@ -69,6 +54,21 @@ class TgMessages(Base):
         cascade="all,delete",
         passive_deletes=True,
     )
+    # date_unixtime: Mapped[str]
+    # edited_unixtime: Mapped[str | None]
+    # poll_id: Mapped[int | None] = mapped_column(ForeignKey('polls.id'))
+    # forwarded_from: Mapped[str | None]
+    # photo: Mapped[str | None]
+    # file: Mapped[str | None]
+    # thumbnail: Mapped[str | None]
+    # duration_seconds: Mapped[int | None]
+    # width: Mapped[int | None]
+    # height: Mapped[int | None]
+    # sticker_emoji: Mapped[str | None]
+    # text: Mapped[str | None]  # Note: complex JSON structure might need handling
+    # text_entities
+    # members: Mapped[list[str]] = mapped_column(...)
+    # dialog_model_id: Mapped[int] = mapped_column(Integer, ForeignKey('dialogs.id'), primary_key=True)
     # Relationships
     # poll: Mapped[Poll] = relationship(back_populates="tg_messages")
 
@@ -88,6 +88,13 @@ class TgTextEntity(Base):
     )
 
 
+class TgUserNames(Base):
+    __tablename__ = "tg_user_names"
+    id: Mapped[intpk]
+    from_: Mapped[str | None]
+    from_id: Mapped[str | None] = mapped_column(String, unique=True, nullable=True)
+
+    tg_messages: Mapped[list["TgMessages"]] = relationship()
 
 # class Poll(Base):
 #     __tablename__ = 'polls'
