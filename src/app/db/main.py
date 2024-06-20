@@ -26,13 +26,20 @@ def _main(is_drop: bool = False, is_restart: bool = False):
 
 
 def main():
-    a_parser = argparse.ArgumentParser()
+    """
+    Обрабатывает аргументы командной строки для управления базой данных.
+    Использование:
+        db-util     # Создать таблицы базы данных
+        db-util -d  # Удалить таблицы базы данных
+        db-util -r  # Удалить и создать таблицы заново
+    """
+    a_parser = argparse.ArgumentParser(description="Скрипт управления базой данных.")
     a_parser.add_argument('-d', '--drop',
                           action='store_true',
-                          help='Drop database')
+                          help='drop database')
     a_parser.add_argument('-r', '--restart',
                           action='store_true',
-                          help='Restart with drop database')
+                          help='restart with drop database')
     args = a_parser.parse_args()
 
     _main(is_drop=args.drop, is_restart=args.restart)

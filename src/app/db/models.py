@@ -81,7 +81,7 @@ class TgTextEntity(Base):
     href: Mapped[str | None]
     document_id: Mapped[str | None]
     user_id: Mapped[int | None] = mapped_column(BigInteger)
-    message_id: Mapped[int] = mapped_column(ForeignKey('tg_messages.id', ondelete='CASCADE'))
+    message_id: Mapped[int] = mapped_column(ForeignKey('tg_messages.id', ondelete='CASCADE'), unique=False)
 
     tg_messages: Mapped["TgMessages"] = relationship(
         back_populates="tg_text_entities"

@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import select, func, Integer, delete, insert, Row
+from sqlalchemy import select, func, Integer
 from sqlalchemy.orm import aliased
+from sqlalchemy.dialects.postgresql import insert
 
 from app.db import models as orm
 from app.repositories.base import BaseRepository
@@ -10,6 +11,11 @@ from app.util import core
 
 
 class DataRepository(BaseRepository):
+    def verify_json(self, jsn: bytes):
+        if jsn.count('{') != jsn.count('}') or jsn.count('{') == 0:
+            return False
+        return True
+
     def write_json_to_db(self, jsn: bytes) -> sch.ChatModel:
         db_scheme = sch.ChatModel.model_validate_json(json_data=jsn)
 
@@ -39,6 +45,56 @@ class DataRepository(BaseRepository):
                 # Обработка текста сообщений
                 text_entity = orm.TgTextEntity(**text_ent.model_dump(), message_id=jsn_message.id)
                 self.session.add(text_entity)
+
+        self.session.commit()
+        return db_scheme
+
+    def write_json_to_db_new(self, jsn: bytes) -> sch.ChatModel:
+        db_scheme = sch.ChatModel.model_validate_json(json_data=jsn)
+
+        # Создаем и добавляем диалог
+        stmt = (insert(orm.TgChats)
+                .values(**db_scheme.model_dump(exclude={'messages'}))
+                .on_conflict_do_update(index_elements=['id'], set_=db_scheme.model_dump(exclude={'messages'}))
+                )
+
+        self.session.execute(stmt)
+        # tg_chat_model = orm.TgChats(**db_scheme.model_dump(exclude={'messages'}))
+        # self.session.add(tg_chat_model)
+        self.session.flush()
+
+        user_list = []
+
+        for jsn_message in db_scheme.messages:
+            if jsn_message.from_id is not None:
+                user_list.append({'from_id': jsn_message.from_id, 'from_': jsn_message.from_})
+
+        for user_dict in user_list:
+            stmt = (insert(orm.TgUserNames)
+                    .values(from_id=user_dict['from_id'], from_=user_dict['from_'])
+                    .on_conflict_do_update(index_elements=['from_id'], set_={'from_': user_dict['from_']}))
+            self.session.execute(stmt)
+
+        self.session.flush()
+
+        for jsn_message in db_scheme.messages:
+            # Обработка сообщений
+            stmt = (insert(orm.TgMessages)
+                    .values(**jsn_message.model_dump(exclude={"text_entities", "from_"}), tg_chat_model_id=db_scheme.id)
+                    .on_conflict_do_update(index_elements=['id'],
+                                           set_=jsn_message.model_dump(
+                                               exclude={"text_entities", "from_"})))  # add tg_chat_model_id
+            self.session.execute(stmt)
+
+            for text_ent in jsn_message.text_entities:
+                # Обработка текста сообщений
+                dict_to_update = text_ent.model_dump()
+                dict_to_update['message_id'] = jsn_message.id
+                stmt = (insert(orm.TgTextEntity)
+                        .values(**text_ent.model_dump(), message_id=jsn_message.id)
+                        .on_conflict_do_update(index_elements=['id'],
+                                               set_=dict_to_update))  # TODO сюда вставляются дубликаты, проверять стр 32
+                self.session.execute(stmt)
 
         self.session.commit()
         return db_scheme
